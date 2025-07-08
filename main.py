@@ -51,3 +51,10 @@ current_year = datetime.datetime.now().year
 july = create_month(current_year, 7)  # Create May
 print(july)  # Print the created month
 
+
+jian = {    
+"name": "Jian",
+"work":"internal",
+"days": [],
+}
+
