@@ -1,71 +1,5 @@
 import datetime
 
-def create_month(year, month_num):
-    """創建指定年月的排班表
-    
-    Args:
-        year: 年份
-        month_num: 月份
-    
-    Returns:
-        month: 包含整個月每一天的排班結構
-    """
-    month = []
-    
-    # 創建一天的模板結構
-    day_template = {
-        "date": "",  # 日期
-        "day": {"internal": "", "surgical": "", "an": "", "noon": ""},  
-        "night": {"internal": "", "surgical": "", "an": "", "stay": ""}  
-    }
-    
-    # 獲取指定月份的第一天
-    first_day = datetime.datetime(year, month_num, 1)
-    
-    # 計算該月份的總天數
-    if month_num == 12:
-        next_month = datetime.datetime(year + 1, 1, 1)
-    else:
-        next_month = datetime.datetime(year, month_num + 1, 1)
-    
-    num_days = (next_month - first_day).days
-    
-    # 為整個月的每一天創建排班結構
-    for i in range(num_days):
-        # 計算當前日期
-        current_date = first_day + datetime.timedelta(days=i)
-        
-        # 獲取星期幾 (0=週一, 1=週二, 2=週三, 3=週四, 等等)
-        day_of_week = current_date.weekday()
-        
-        # 週二(1)、週三(2)、週四(3)的中午班設為"X"
-        noon_value = "X" if day_of_week in [1, 2, 3] else ""
-        
-        # 複製模板創建新的一天
-        new_day = {
-            "date": current_date.strftime("%Y-%m-%d"),
-            "day": {
-                "internal": "",    # 內科日班
-                "surgical": "",    # 外科日班
-                "an": "",         
-                "noon": noon_value # 中午班
-            },
-            "night": {
-                "internal": "",   # 內科夜班
-                "surgical": "",   # 外科夜班
-                "an": "",        
-                "stay": ""       # 留守夜班
-            }
-        }
-        month.append(new_day)
-    
-    return month
-
-# 使用範例：
-current_year = datetime.datetime.now().year
-schedule = create_month(current_year, 7)  # 創建7月份的排班表
-
-
 # 定義所有工作人員的基本信息和可用性
 jian = {    
 "name": "Jian",        # 姓名
@@ -192,6 +126,74 @@ qiang = {
 # 所有工作人員列表
 people = [jian, feng, ming, lan, mou, teng, zhi, hua, da, jin, yong, yi, fang, han, chun, jian4, qiang]
 
+
+def create_schedule(year, month_num):
+    """創建指定年月的排班表
+    
+    Args:
+        year: 年份
+        month_num: 月份
+    
+    Returns:
+        month: 包含整個月每一天的排班結構
+    """
+    month = []
+    
+    # 創建一天的模板結構
+    day_template = {
+        "date": "",  # 日期
+        "day": {"internal": "", "surgical": "", "an": "", "noon": ""},  
+        "night": {"internal": "", "surgical": "", "an": "", "stay": ""}  
+    }
+    
+    # 獲取指定月份的第一天
+    first_day = datetime.datetime(year, month_num, 1)
+    
+    # 計算該月份的總天數
+    if month_num == 12:
+        next_month = datetime.datetime(year + 1, 1, 1)
+    else:
+        next_month = datetime.datetime(year, month_num + 1, 1)
+    
+    num_days = (next_month - first_day).days
+    
+    # 為整個月的每一天創建排班結構
+    for i in range(num_days):
+        # 計算當前日期
+        current_date = first_day + datetime.timedelta(days=i)
+        
+        # 獲取星期幾 (0=週一, 1=週二, 2=週三, 3=週四, 等等)
+        day_of_week = current_date.weekday()
+        
+        # 週二(1)、週三(2)、週四(3)的中午班設為"X"
+        noon_value = "X" if day_of_week in [1, 2, 3] else ""
+        
+        # 複製模板創建新的一天
+        new_day = {
+            "date": current_date.strftime("%Y-%m-%d"),
+            "day": {
+                "internal": "",    # 內科日班
+                "surgical": "",    # 外科日班
+                "an": "",         
+                "noon": noon_value # 中午班
+            },
+            "night": {
+                "internal": "",   # 內科夜班
+                "surgical": "",   # 外科夜班
+                "an": "",        
+                "stay": ""       # 留守夜班
+            }
+        }
+        month.append(new_day)
+    
+    return month
+
+# 使用範例：
+current_year = datetime.datetime.now().year
+schedule = create_schedule(current_year, 7)  # 創建7月份的排班表
+
+
+
 def can_work_shift(person, day_index, shift):
     """檢查人員是否可以上指定班次"""
     availability = person["days"][day_index]
@@ -202,7 +204,7 @@ def can_work_shift(person, day_index, shift):
         return availability in ["ok", "no_day"]
     return False
 
-def get_available_people_for_slot(day_index, shift, department, assigned_today):
+def get_available_people_for_slot(day_index, shift, department, assigned_today, people, schedule):
     """獲取可分配到指定班次的人員列表，按優先級排序"""
     available_people = []
     
@@ -250,7 +252,7 @@ def get_available_people_for_slot(day_index, shift, department, assigned_today):
     available_people.sort(key=lambda x: x[1], reverse=True)
     return [person for person, _ in available_people]
 
-def get_all_slots():
+def get_all_slots(schedule):
     """獲取所有需要分配的班次位置"""
     slots = []
     for day_index, day in enumerate(schedule):
@@ -299,7 +301,7 @@ def calculate_slot_difficulty(day_index, shift, department):
     
     return difficulty
 
-def assign_schedule_backtrack():
+def assign_schedule_backtrack(people, schedule):
     """使用回溯法進行最優排班分配"""
     
     # 重置所有人員的工作次數
@@ -314,7 +316,7 @@ def assign_schedule_backtrack():
                     day[shift][dept] = ""
     
     # 獲取所有需要分配的班次，按難度排序
-    slots = get_all_slots()
+    slots = get_all_slots(schedule)
     slots.sort(key=lambda x: calculate_slot_difficulty(x[0], x[1], x[2]), reverse=True)
     
     def backtrack(slot_index):
@@ -332,7 +334,7 @@ def assign_schedule_backtrack():
                     assigned_today.add(schedule[day_index][s][d])
         
         # 獲取可用人員列表，按優先級排序
-        available_people = get_available_people_for_slot(day_index, shift, department, assigned_today)
+        available_people = get_available_people_for_slot(day_index, shift, department, assigned_today, people, schedule)
         
         # 嘗試每個可用人員
         for person in available_people:
@@ -354,7 +356,7 @@ def assign_schedule_backtrack():
     success = backtrack(0)
     return success
 
-def assign_schedule_hybrid():
+def assign_schedule_hybrid(people, schedule):
     """使用混合策略：先用貪婪演算法，失敗後用回溯法"""
     
     print("第一階段：使用貪婪演算法...")
@@ -391,7 +393,7 @@ def assign_schedule_hybrid():
                 continue
             
             # 獲取可用人員列表
-            available_people = get_available_people_for_slot(day_index, shift, department, assigned_today)
+            available_people = get_available_people_for_slot(day_index, shift, department, assigned_today, people, schedule)
             
             # 分配給最優先的人員
             if available_people:
@@ -401,7 +403,7 @@ def assign_schedule_hybrid():
                 assigned_today.add(selected_person["name"])
     
     # 檢查是否有空班
-    empty_count, total_shifts, empty_details = count_empty_shifts()
+    empty_count, total_shifts, empty_details = count_empty_shifts(schedule)
     
     if empty_count == 0:
         print("貪婪演算法成功！無空班。")
@@ -411,7 +413,7 @@ def assign_schedule_hybrid():
         print("第二階段：使用回溯法尋找完美解...")
         
         # 使用回溯法
-        success = assign_schedule_backtrack()
+        success = assign_schedule_backtrack(people, schedule)
         if success:
             print("回溯法成功！找到完美解。")
             return True
@@ -420,11 +422,11 @@ def assign_schedule_hybrid():
             return False
 
 # 使用混合策略進行排班
-def assign_schedule():
+def assign_schedule(people, schedule):
     """主排班函數"""
-    return assign_schedule_hybrid()
+    return assign_schedule_hybrid(people, schedule)
 
-def count_empty_shifts():
+def count_empty_shifts(schedule):
     """統計空班數量"""
     empty_count = 0
     total_shifts = 0
@@ -459,18 +461,14 @@ def count_empty_shifts():
     
     return empty_count, total_shifts, empty_details
 
-# 執行混合策略排班
-print("正在執行混合策略排班（貪婪 + 回溯）...")
-success = assign_schedule()
-
-def display_results():
+def display_results(schedule):
     """顯示排班結果和統計"""
     print("=" * 60)
     print("混合策略排班結果")
     print("=" * 60)
     
     # 統計空班
-    empty_count, total_shifts, empty_details = count_empty_shifts()
+    empty_count, total_shifts, empty_details = count_empty_shifts(schedule)
     coverage_rate = (total_shifts - empty_count) / total_shifts * 100
     
     print(f"\n班次覆蓋率統計：")
@@ -484,26 +482,33 @@ def display_results():
         for detail in empty_details:
             print(f"  - {detail}")
     else:
-        print("\n🎉 完美排班！沒有空班！")
+        print("\n完美排班！沒有空班！")
+
+def main(people_list,year,month):
+    schedule = create_schedule(year, month)  # 創建指定年月的排班表
     
+    print("正在執行混合策略排班（貪婪 + 回溯）...")
+    success = assign_schedule(people_list, schedule)
 
-# 顯示優化結果
-display_results()
+    # 印出工作分配摘要
+    print("\n工作分配摘要：")
+    for person in people_list:
+        print(f"{person['name']}: {person['work_times']}/{person['times']} 班次已分配")
 
-# 印出工作分配摘要
-print("工作分配摘要：")
-for person in people:
-    print(f"{person['name']}: {person['work_times']}/{person['times']} 班次已分配")
+    print("\n排班表：")
+    for i, day in enumerate(schedule):
+        print(f"第{i+1}天 ({day['date']})：")
+        print(f"  日班 - 內科: {day['day']['internal']}, 外科: {day['day']['surgical']}, 安康: {day['day']['an']}, 中午: {day['day']['noon']}")
+        print(f"  夜班 - 內科: {day['night']['internal']}, 外科: {day['night']['surgical']}, 安康: {day['night']['an']}, 留守: {day['night']['stay']}")
+        print()
 
-print("\n排班表：")
-for i, day in enumerate(schedule):
-    print(f"第{i+1}天 ({day['date']})：")
-    print(f"  日班 - 內科: {day['day']['internal']}, 外科: {day['day']['surgical']}, 安康: {day['day']['an']}, 中午: {day['day']['noon']}")
-    print(f"  夜班 - 內科: {day['night']['internal']}, 外科: {day['night']['surgical']}, 安康: {day['night']['an']}, 留守: {day['night']['stay']}")
-    print()
+    # 最終統計
+    display_results(schedule)
 
-# 顯示排班結果和統計
-display_results()
+    return success
+
+if __name__ == "__main__":
+    main(people,2025,7)
 
 
 
